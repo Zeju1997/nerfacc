@@ -17,6 +17,7 @@ from utils import render_image, set_random_seed
 
 from nerfacc import ContractionType, OccupancyGrid
 
+import csv
 import sys
 
 if __name__ == "__main__":
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--scene",
         type=str,
-        default="lego",
+        default="car",
         choices=[
             # nerf synthetic
             "chair",
@@ -69,6 +70,17 @@ if __name__ == "__main__":
     parser.add_argument(
         "--unbounded",
         action="store_true",
+        help="whether to use unbounded rendering",
+    )
+
+    parser.add_argument(
+        "--log_dir",
+        type=str,
+        default=os.path.join(
+                os.path.dirname(os.path.abspath(__file__)),
+                "..",
+                "./log/",
+        ),
         help="whether to use unbounded rendering",
     )
     parser.add_argument("--cone_angle", type=float, default=0.0)
@@ -160,7 +172,15 @@ if __name__ == "__main__":
     ).to(device)
 
     # training
+    experiment = "baseline"
+    n_views = 100
+
     print("Start training ...")
+    logname = os.path.join(args.log_dir, 'results' + '_' + experiment + '.csv')
+    if not os.path.exists(logname):
+        with open(logname, 'w') as logfile:
+            logwriter = csv.writer(logfile, delimiter=',')
+            logwriter.writerow(['number of views', 'psnr'])
     step = 0
     tic = time.time()
     for epoch in range(10000000):
@@ -269,6 +289,11 @@ if __name__ == "__main__":
 
             if step == max_steps:
                 print("training stops")
+
+                with open(logname, 'a') as logfile:
+                    logwriter = csv.writer(logfile, delimiter=',')
+                    logwriter.writerow([n_views, psnr_avg])
+
                 exit()
 
             step += 1
