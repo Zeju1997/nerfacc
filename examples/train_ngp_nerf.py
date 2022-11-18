@@ -19,6 +19,9 @@ from nerfacc import ContractionType, OccupancyGrid
 
 if __name__ == "__main__":
 
+    import os # adding this line
+    os.environ["PATH"] = os.environ["PATH"]+":/is/software/nvidia/cuda-11.7/bin/"
+
     device = "cuda:0"
     set_random_seed(42)
 
@@ -87,7 +90,7 @@ if __name__ == "__main__":
     if args.unbounded:
         from datasets.nerf_360_v2 import SubjectLoader
 
-        data_root_fp = "/home/ruilongli/data/360_v2/"
+        data_root_fp = "./data/360_v2/"
         target_sample_batch_size = 1 << 20
         train_dataset_kwargs = {"color_bkgd_aug": "random", "factor": 4}
         test_dataset_kwargs = {"factor": 4}
@@ -95,7 +98,7 @@ if __name__ == "__main__":
     else:
         from datasets.nerf_synthetic import SubjectLoader
 
-        data_root_fp = "/home/ruilongli/data/nerf_synthetic/"
+        data_root_fp = "./data/nerf_synthetic/"
         target_sample_batch_size = 1 << 18
         grid_resolution = 128
 
@@ -176,6 +179,7 @@ if __name__ == "__main__":
     ).to(device)
 
     # training
+    print("Start training ...")
     step = 0
     tic = time.time()
     for epoch in range(10000000):
