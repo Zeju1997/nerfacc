@@ -6,7 +6,8 @@ import collections
 import json
 import os
 
-import imageio.v2 as imageio
+# import imageio.v2 as imageio
+import imageio
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -63,7 +64,6 @@ class SubjectLoader(torch.utils.data.Dataset):
         "materials",
         "mic",
         "ship",
-        "car",
     ]
 
     WIDTH, HEIGHT = 800, 800
@@ -77,6 +77,7 @@ class SubjectLoader(torch.utils.data.Dataset):
         split: str,
         color_bkgd_aug: str = "white",
         num_rays: int = None,
+        num_views: int = None,
         near: float = None,
         far: float = None,
         batch_over_images: bool = True,
@@ -101,6 +102,17 @@ class SubjectLoader(torch.utils.data.Dataset):
             _images_val, _camtoworlds_val, _focal_val = _load_renderings(
                 root_fp, subject_id, "val"
             )
+
+            if num_views is not None:
+                idx_train = np.random.choice(_images_train.shape[0], num_views)
+                idx_val = np.random.choice(_images_val.shape[0], num_views)
+                _images_train = _images_train[idx_train, :]
+                _camtoworlds_train = _camtoworlds_train[idx_train, :]
+                _focal_train = _focal_train[idx_train, :]
+                _images_val = _images_val[idx_val, :]
+                _camtoworlds_val = _camtoworlds_val[idx_val, :]
+                _focal_val = _focal_val[idx_val, :]
+
             self.images = np.concatenate([_images_train, _images_val])
             self.camtoworlds = np.concatenate(
                 [_camtoworlds_train, _camtoworlds_val]
@@ -195,9 +207,7 @@ class SubjectLoader(torch.utils.data.Dataset):
             torch.stack(
                 [
                     (x - self.K[0, 2] + 0.5) / self.K[0, 0],
-                    (y - self.K[1, 2] + 0.5)
-                    / self.K[1, 1]
-                    * (-1.0 if self.OPENGL_CAMERA else 1.0),
+                    (y - self.K[1, 2] + 0.5) / self.K[1, 1] * (-1.0 if self.OPENGL_CAMERA else 1.0),
                 ],
                 dim=-1,
             ),
@@ -206,16 +216,16 @@ class SubjectLoader(torch.utils.data.Dataset):
         )  # [num_rays, 3]
 
         # [n_cams, height, width, 3]
-        directions = (camera_dirs[:, None, :] * c2w[:, :3, :3]).sum(dim=-1)
-        origins = torch.broadcast_to(c2w[:, :3, -1], directions.shape)
+        directions = (camera_dirs[:, None, :] * c2w[:, :3, :3]).sum(dim=-1) # [64, 3]
+        origins = torch.broadcast_to(c2w[:, :3, -1], directions.shape) # [64, 3]
         viewdirs = directions / torch.linalg.norm(
             directions, dim=-1, keepdims=True
-        )
+        ) # [64, 3]
 
         if self.training:
-            origins = torch.reshape(origins, (num_rays, 3))
-            viewdirs = torch.reshape(viewdirs, (num_rays, 3))
-            rgba = torch.reshape(rgba, (num_rays, 4))
+            origins = torch.reshape(origins, (num_rays, 3)) # [64, 3]
+            viewdirs = torch.reshape(viewdirs, (num_rays, 3)) # [64, 3]
+            rgba = torch.reshape(rgba, (num_rays, 4)) # [64, 4]
         else:
             origins = torch.reshape(origins, (self.HEIGHT, self.WIDTH, 3))
             viewdirs = torch.reshape(viewdirs, (self.HEIGHT, self.WIDTH, 3))
