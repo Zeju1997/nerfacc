@@ -72,7 +72,12 @@ if __name__ == "__main__":
         action="store_true",
         help="whether to use unbounded rendering",
     )
-
+    parser.add_argument(
+        "--n_views",
+        type=int
+        default=100,
+        help="whether to use unbounded rendering",
+    )
     parser.add_argument(
         "--log_dir",
         type=str,
@@ -147,6 +152,7 @@ if __name__ == "__main__":
         root_fp=data_root_fp,
         split=args.train_split,
         num_rays=target_sample_batch_size // render_n_samples,
+        n_views=args.n_views,
         **train_dataset_kwargs,
     )
 
@@ -159,6 +165,7 @@ if __name__ == "__main__":
         root_fp=data_root_fp,
         split="test",
         num_rays=None,
+        n_views=None,
         **test_dataset_kwargs,
     )
     test_dataset.images = test_dataset.images.to(device)
@@ -173,7 +180,6 @@ if __name__ == "__main__":
 
     # training
     experiment = "baseline"
-    n_views = 100
 
     print("Start training ...")
     logname = os.path.join(args.log_dir, 'results' + '_' + experiment + '.csv')
