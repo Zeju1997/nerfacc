@@ -7,4 +7,4 @@ conda activate nerfacc
 
 # seeds=(10094 16734 20058 26284 27026)
 
-python examples/train_mlp_nerf.py --train_split train --scene lego
+python examples/train_mlp_nerf.py

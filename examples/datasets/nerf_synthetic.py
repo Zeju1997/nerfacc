@@ -15,7 +15,7 @@ import torch.nn.functional as F
 from .utils import Rays
 
 
-def _load_renderings(root_fp: str, subject_id: str, split: str):
+def _load_renderings(root_fp: str, subject_id: str, split: str, n_views: int):
     """Load images from disk."""
     if not root_fp.startswith("/"):
         # allow relative path. e.g., "./data/nerf_synthetic/"
@@ -44,6 +44,12 @@ def _load_renderings(root_fp: str, subject_id: str, split: str):
     images = np.stack(images, axis=0)
     camtoworlds = np.stack(camtoworlds, axis=0)
 
+    print("[{}] number of views {}".format(split, n_views))
+    # idx = np.random.choice(images.shape[0], n_views)
+    idx = np.array([42, 88, 95])
+    images = images[idx, :]
+    camtoworlds = camtoworlds[idx, :]
+
     h, w = images.shape[1:3]
     camera_angle_x = float(meta["camera_angle_x"])
     focal = 0.5 * w / np.tan(0.5 * camera_angle_x)
@@ -64,6 +70,7 @@ class SubjectLoader(torch.utils.data.Dataset):
         "materials",
         "mic",
         "ship",
+        "car",
     ]
 
     WIDTH, HEIGHT = 800, 800
@@ -77,7 +84,7 @@ class SubjectLoader(torch.utils.data.Dataset):
         split: str,
         color_bkgd_aug: str = "white",
         num_rays: int = None,
-        num_views: int = None,
+        n_views: int = None,
         near: float = None,
         far: float = None,
         batch_over_images: bool = True,
@@ -102,10 +109,10 @@ class SubjectLoader(torch.utils.data.Dataset):
             _images_val, _camtoworlds_val, _focal_val = _load_renderings(
                 root_fp, subject_id, "val"
             )
-
-            if num_views is not None:
-                idx_train = np.random.choice(_images_train.shape[0], num_views)
-                idx_val = np.random.choice(_images_val.shape[0], num_views)
+            if n_views is not None:
+                # print("Number of views: ", n_views)
+                idx_train = np.random.choice(_images_train.shape[0], n_views)
+                idx_val = np.random.choice(_images_val.shape[0], n_views)
                 _images_train = _images_train[idx_train, :]
                 _camtoworlds_train = _camtoworlds_train[idx_train, :]
                 _focal_train = _focal_train[idx_train, :]
@@ -120,7 +127,7 @@ class SubjectLoader(torch.utils.data.Dataset):
             self.focal = _focal_train
         else:
             self.images, self.camtoworlds, self.focal = _load_renderings(
-                root_fp, subject_id, split
+                root_fp, subject_id, split, n_views
             )
         self.images = torch.from_numpy(self.images).to(torch.uint8)
         self.camtoworlds = torch.from_numpy(self.camtoworlds).to(torch.float32)

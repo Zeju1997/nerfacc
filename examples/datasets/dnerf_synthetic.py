@@ -13,7 +13,7 @@ import torch.nn.functional as F
 from .utils import Rays
 
 
-def _load_renderings(root_fp: str, subject_id: str, split: str):
+def _load_renderings(root_fp: str, subject_id: str, split: str, n_view: int):
     """Load images from disk."""
     if not root_fp.startswith("/"):
         # allow relative path. e.g., "./data/dnerf_synthetic/"
@@ -46,9 +46,14 @@ def _load_renderings(root_fp: str, subject_id: str, split: str):
         camtoworlds.append(frame["transform_matrix"])
         images.append(rgba)
 
+    print("Number of views: ", n_views)
     images = np.stack(images, axis=0)
     camtoworlds = np.stack(camtoworlds, axis=0)
     timestamps = np.stack(timestamps, axis=0)
+
+    idx = np.random.choice(images.shape[0], n_views)
+    images = images[idx, :]
+    camtoworlds = camtoworlds[idx, :]
 
     h, w = images.shape[1:3]
     camera_angle_x = float(meta["camera_angle_x"])

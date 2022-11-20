@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--scene",
         type=str,
-        default="car",
+        default="lego",
         choices=[
             # nerf synthetic
             "chair",
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--n_views",
-        type=int
+        type=int,
         default=100,
         help="whether to use unbounded rendering",
     )
@@ -90,6 +90,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cone_angle", type=float, default=0.0)
     args = parser.parse_args()
+
+    args.n_views = 3
 
     render_n_samples = 1024
 
@@ -128,6 +130,7 @@ if __name__ == "__main__":
         ],
         gamma=0.33,
     )
+
     print("Start loading data ...")
     # setup the dataset
     train_dataset_kwargs = {}
@@ -145,7 +148,7 @@ if __name__ == "__main__":
 
         data_root_fp = "./data/nerf_synthetic/"
         target_sample_batch_size = 1 << 16
-        grid_resolution = 32
+        grid_resolution = 128
 
     train_dataset = SubjectLoader(
         subject_id=args.scene,
@@ -165,7 +168,7 @@ if __name__ == "__main__":
         root_fp=data_root_fp,
         split="test",
         num_rays=None,
-        n_views=None,
+        n_views=200,
         **test_dataset_kwargs,
     )
     test_dataset.images = test_dataset.images.to(device)
@@ -179,10 +182,10 @@ if __name__ == "__main__":
     ).to(device)
 
     # training
-    experiment = "baseline"
+    # experiment = "baseline"
 
     print("Start training ...")
-    logname = os.path.join(args.log_dir, 'results' + '_' + experiment + '.csv')
+    logname = os.path.join(args.log_dir, 'results' + '_' + args.scene + '_' + str(args.n_views) + '.csv')
     if not os.path.exists(logname):
         with open(logname, 'w') as logfile:
             logwriter = csv.writer(logfile, delimiter=',')
@@ -197,7 +200,12 @@ if __name__ == "__main__":
             render_bkgd = data["color_bkgd"]
             rays = data["rays"]
             pixels = data["pixels"]
-            
+
+            # try:
+            #     os.remove("~/.cache/torch_extensions/py39_cu117/nerfacc_cuda/lock")
+            # except OSError:
+            #     pass
+
             # update occupancy grid
             occupancy_grid.every_n_step(
                 step=step,
@@ -298,7 +306,7 @@ if __name__ == "__main__":
 
                 with open(logname, 'a') as logfile:
                     logwriter = csv.writer(logfile, delimiter=',')
-                    logwriter.writerow([n_views, psnr_avg])
+                    logwriter.writerow([args.n_views, psnr_avg])
 
                 exit()
 
