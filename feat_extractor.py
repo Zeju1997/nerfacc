@@ -6,11 +6,7 @@ from PIL import Image
 from torchvision import models, transforms
 import torch.nn as nn
 import shutil
-<<<<<<< HEAD
 import itertools
-=======
-
->>>>>>> f309564572a161313a5e233b3e9f50afe271e111
 # shutil.copytree(data_dir, os.path.join(features_dir, data_dir[2:]))
 
 import os
@@ -25,10 +21,6 @@ from torchvision.transforms import ToTensor
 from models import MHE
 
 from tqdm import tqdm
-
-import json
-
-import imageio
 
 import json
 
@@ -60,7 +52,6 @@ class CustomImageDataset(Dataset):
 
     def __len__(self):
         return len(self.frames)
-<<<<<<< HEAD
 
     @torch.no_grad()
     def __getitem__(self, index):
@@ -68,15 +59,6 @@ class CustomImageDataset(Dataset):
         img = Image.open(fname)
         img = self.transform(img)
 
-=======
-
-    @torch.no_grad()
-    def __getitem__(self, index):
-        fname = self.frames[index]
-        img = Image.open(fname)
-        img = self.transform(img)
-
->>>>>>> f309564572a161313a5e233b3e9f50afe271e111
         color_bkgd = torch.ones(3, 1, 1)
         pixels, alpha = torch.split(img, [3, 1], dim=0)
         pixels = pixels * alpha + color_bkgd * (1.0 - alpha)
@@ -105,11 +87,8 @@ def extractor(img_path, saved_path, net, use_gpu):
 
 if __name__ == '__main__':
 
-<<<<<<< HEAD
     n_views = 3
 
-=======
->>>>>>> f309564572a161313a5e233b3e9f50afe271e111
     train_dataset = CustomImageDataset(root="./data/nerf_synthetic/lego/",
                                        split="train",
                                        transform=None)
@@ -119,11 +98,7 @@ if __name__ == '__main__':
                                 shuffle=False,
                                 drop_last=False)
 
-<<<<<<< HEAD
     resnet50_feature_extractor = models.resnet50(pretrained=True)
-=======
-    resnet50_feature_extractor = models.resnet50(pretrained=True).cuda()
->>>>>>> f309564572a161313a5e233b3e9f50afe271e111
     resnet50_feature_extractor.fc = nn.Linear(2048, 2048)
     torch.nn.init.eye_(resnet50_feature_extractor.fc.weight)
     for param in resnet50_feature_extractor.parameters():
@@ -132,39 +107,30 @@ if __name__ == '__main__':
     N = len(train_dataset)
     features = torch.zeros((N, 2048))
 
-<<<<<<< HEAD
     resnet50_feature_extractor = resnet50_feature_extractor.cuda()
 
-=======
->>>>>>> f309564572a161313a5e233b3e9f50afe271e111
     for idx, data in enumerate(train_loader):
         data = data.cuda()
         feat = resnet50_feature_extractor(data)
         features[idx, :] = feat
-<<<<<<< HEAD
 
     indices = list(range(0, N))
     com_indices = list(itertools.combinations(indices, n_views))
 
-    best_score = 100000
-    best_idx = [0, 1, 2]
-
     losses = []
 
     mhe_loss = MHE(n_views)
-    
+
     for i in tqdm(com_indices):
         selected_features = features[i, :]
         loss = mhe_loss(selected_features)
-        
+
         losses.append(loss.item())
 
-        if loss.item() < best_score:
-            best_score = loss.item()
-            best_idx = i
+    from operator import itemgetter
+    max_idx, max_loss = max(enumerate(losses), key=itemgetter(1))
+    min_idx, min_loss = min(enumerate(losses), key=itemgetter(1))
+    max_item = com_indices[max_idx]
+    min_item = com_indices[min_idx]
 
-    print(max(losses), min(losses), best_score, best_idx)
-=======
-
-    print("asdkjfaklsdf")
->>>>>>> f309564572a161313a5e233b3e9f50afe271e111
+    print(max_loss, max_item, min_loss, min_item)
