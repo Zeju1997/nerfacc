@@ -88,6 +88,7 @@ def extractor(img_path, saved_path, net, use_gpu):
 if __name__ == '__main__':
 
     n_views = 3
+    all_views = False
 
     train_dataset = CustomImageDataset(root="./data/nerf_synthetic/lego/",
                                        split="train",
@@ -98,7 +99,7 @@ if __name__ == '__main__':
                                 shuffle=False,
                                 drop_last=False)
 
-    resnet50_feature_extractor = models.resnet50(pretrained=True)
+    resnet50_feature_extractor = models.resnet50(pretrained=False)
     resnet50_feature_extractor.fc = nn.Linear(2048, 2048)
     torch.nn.init.eye_(resnet50_feature_extractor.fc.weight)
     for param in resnet50_feature_extractor.parameters():
@@ -121,16 +122,37 @@ if __name__ == '__main__':
 
     mhe_loss = MHE(n_views)
 
-    for i in tqdm(com_indices):
+    if not all_views:
+        i = [44, 87, 93]
         selected_features = features[i, :]
         loss = mhe_loss(selected_features)
+        print(i, loss.item())
 
-        losses.append(loss.item())
+    else:
+        for i in tqdm(com_indices):
+            selected_features = features[i, :]
+            loss = mhe_loss(selected_features)
 
-    from operator import itemgetter
-    max_idx, max_loss = max(enumerate(losses), key=itemgetter(1))
-    min_idx, min_loss = min(enumerate(losses), key=itemgetter(1))
-    max_item = com_indices[max_idx]
-    min_item = com_indices[min_idx]
+            losses.append(loss.item())
 
-    print(max_loss, max_item, min_loss, min_item)
+        arg_loss_idx = sorted(range(len(losses)), key=lambda k: losses[k])
+        losses = [losses[i] for i in arg_loss_idx]
+        com_indices = [com_indices[i] for i in arg_loss_idx]
+
+        # indices = [0, 10, 200, 5000, 20000, 80000, 120000, 350000, 1100000, len(com_indices)-1]
+        nerf_indices = np.linspace(0, len(com_indices)-1, 8, dtype=int, endpoint=True)
+
+        nerf_losses = [losses[i] for i in nerf_indices]
+        nerf_views = [com_indices[i] for i in nerf_indices]
+
+        print("Nerf view indices", nerf_views)
+        print("Nerf view MHE loss", nerf_losses)
+
+        '''
+        from operator import itemgetter
+        max_idx, max_loss = max(enumerate(losses), key=itemgetter(1))
+        min_idx, min_loss = min(enumerate(losses), key=itemgetter(1))
+        max_item = com_indices[max_idx]
+        min_item = com_indices[min_idx]
+        print(max_loss, max_item, min_loss, min_item)
+        '''
